@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAP Port Notebook</title>
+<meta name="description" content="Two custom SAP transactions ported to RAP, read line by line: managed BO, BDEF, behavior pool, EML, with notes on the nuances a reviewer will probe.">
+<meta property="og:title" content="RAP Port Notebook">
+<meta property="og:description" content="Two custom SAP transactions ported to RAP, read line by line, with notes on the nuances a reviewer will probe.">
+<meta property="og:type" content="article">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a workbench. Object chain on top, then objects | code | notes, then the rule mapper and drill cards. */
+:root {
+  --bg: #F2F4F7; --panel: #FFFFFF; --panel-2: #EBEFF5; --ink: #17202B; --muted: #5A6575; --line: #D7DDE6;
+  --accent: #2A57C0; --accent-soft: #E2E9FA; --on-accent: #FFFFFF;
+  --t-rap: #2A57C0; --t-port: #0E776A; --t-review: #9F5F0E; --t-gap: #AF3838;
+  --code-bg: #FBFCFE; --code-ink: #1E2935; --c-kw: #3345A6; --c-str: #964711; --c-com: #6A7686; --c-ann: #77399A;
+  --c-num: #0E776A; --c-rap: #AF3838; --hl: #FFF1C2; --hl-edge: #D9A42E; --gutter: #96A0AE;
+  --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E131A; --panel: #151C25; --panel-2: #1B2430; --ink: #DDE4EC; --muted: #95A2B3; --line: #2A3544;
+  --accent: #82A4FF; --accent-soft: #1C2943; --on-accent: #0E131A;
+  --t-rap: #82A4FF; --t-port: #4CC3AF; --t-review: #E3A84E; --t-gap: #F08282;
+  --code-bg: #10161E; --code-ink: #D4DCE5; --c-kw: #93ABFF; --c-str: #EAA66C; --c-com: #7E8B9C; --c-ann: #C89DEB;
+  --c-num: #61D1BD; --c-rap: #F38D8D; --hl: #3A3113; --hl-edge: #C99A2E; --gutter: #5E6A7A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E131A; --panel: #151C25; --panel-2: #1B2430; --ink: #DDE4EC; --muted: #95A2B3; --line: #2A3544;
+  --accent: #82A4FF; --accent-soft: #1C2943; --on-accent: #0E131A;
+  --t-rap: #82A4FF; --t-port: #4CC3AF; --t-review: #E3A84E; --t-gap: #F08282;
+  --code-bg: #10161E; --code-ink: #D4DCE5; --c-kw: #93ABFF; --c-str: #EAA66C; --c-com: #7E8B9C; --c-ann: #C89DEB;
+  --c-num: #61D1BD; --c-rap: #F38D8D; --hl: #3A3113; --hl-edge: #C99A2E; --gutter: #5E6A7A; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans) }
+.wrap { max-width: 1400px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px }
+h1, h2, h3 { font-weight: 600; text-wrap: balance; margin: 0 }
+h1 { font-size: 30px; letter-spacing: -0.01em }
+h2 { font-size: 20px }
+.lede { color: var(--muted); max-width: 70ch; margin: 6px 0 0 }
+.eyebrow { font: 500 11px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted) }
+button { font: inherit; color: inherit; cursor: pointer }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+/* header */
+.top { display: grid; gap: 16px }
+.toprow { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-end; justify-content: space-between }
+.seg { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px }
+.seg button { border: 0; background: transparent; padding: 8px 14px; border-radius: 7px; text-align: left; display: grid; gap: 1px }
+.seg button b { font: 600 14px/1.2 var(--mono) }
+.seg button span { font-size: 12px; color: var(--muted) }
+.seg button[aria-pressed="true"] { background: var(--panel); box-shadow: 0 1px 2px rgb(0 0 0 / 0.08) }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; color: var(--muted) }
+.facts b { color: var(--ink); font: 500 13px var(--mono); font-variant-numeric: tabular-nums }
+.blurb { max-width: 90ch; margin: 0 }
+
+/* chain */
+.chain { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; align-items: stretch }
+.node { flex: 0 0 auto; min-width: 130px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+  padding: 8px 10px; text-align: left; display: grid; gap: 2px; position: relative }
+.node .ty { font: 500 10.5px var(--mono); letter-spacing: 0.06em; color: var(--accent) }
+.node .nm { font: 500 12.5px var(--mono); word-break: break-all }
+.node .sb { font-size: 11.5px; color: var(--muted) }
+.node[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft) }
+.arrow { flex: 0 0 auto; align-self: center; color: var(--gutter); font: 14px var(--mono) }
+.chaininfo { font-size: 13px; color: var(--muted); min-height: 1.5em; margin-top: 6px }
+.chaininfo code { font: 12.5px var(--mono); color: var(--ink) }
+
+/* workbench */
+.bench { display: grid; grid-template-columns: 250px minmax(0, 1fr) 360px; gap: 14px; align-items: start }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0 }
+.objs { padding: 10px; display: grid; gap: 12px; position: sticky; top: env(safe-area-inset-top, 0px) }
+.objs h3 { font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0 6px }
+.objs ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px }
+.obj { width: 100%; border: 0; background: transparent; border-radius: 6px; padding: 6px 8px; text-align: left;
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 6px; align-items: center }
+.obj:hover { background: var(--panel-2) }
+.obj[aria-current="true"] { background: var(--accent-soft) }
+.obj .ty { font: 500 10px var(--mono); color: var(--muted); letter-spacing: 0.04em }
+.obj .nm { font: 12.5px var(--mono); overflow-wrap: anywhere }
+.obj .ct { font: 500 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+
+.codepane { display: grid; grid-template-rows: auto minmax(0, 1fr) }
+.codehead { padding: 10px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 2px }
+.codehead .nm { font: 600 14px var(--mono) }
+.codehead .rl { font-size: 13px; color: var(--muted) }
+.code { background: var(--code-bg); color: var(--code-ink); font: 12.5px/1.6 var(--mono); overflow: auto;
+  max-height: 72vh; border-radius: 0 0 10px 10px; padding: 6px 0; position: relative }
+.row { display: grid; grid-template-columns: 42px 18px max-content; min-width: 100%; padding-right: 16px; border-left: 3px solid transparent }
+.row .no { color: var(--gutter); text-align: right; padding-right: 8px; user-select: none; font-variant-numeric: tabular-nums }
+.row .mk { display: flex; align-items: center; gap: 2px }
+.row code { font: inherit; white-space: pre }
+.row.on { background: var(--hl); border-left-color: var(--hl-edge) }
+.dot { width: 9px; height: 9px; border-radius: 50%; border: 0; padding: 0; background: var(--accent) }
+.k { color: var(--c-kw); font-weight: 500 } .s { color: var(--c-str) } .c { color: var(--c-com); font-style: italic }
+.a { color: var(--c-ann) } .n { color: var(--c-num) } .r { color: var(--c-rap); font-weight: 500 }
+.g { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help }
+
+.notespane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); max-height: calc(72vh + 62px) }
+.noteshead { padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 8px }
+.noteshead .cnt { font-size: 13px; color: var(--muted) }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 10px 3px 8px;
+  font-size: 12px; display: inline-flex; align-items: center; gap: 6px }
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+.chip[aria-pressed="false"] { opacity: 0.45 }
+.notes { overflow: auto; padding: 10px; display: grid; gap: 8px; align-content: start; position: relative }
+.note { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; text-align: left; background: var(--panel);
+  display: grid; gap: 4px; border-left: 4px solid var(--tc) }
+.note[aria-current="true"] { background: var(--panel-2); border-color: var(--tc) }
+.note .meta { display: flex; gap: 8px; align-items: baseline; font: 500 11px var(--mono); color: var(--muted) }
+.note .meta .tg { color: var(--tc); letter-spacing: 0.04em; text-transform: uppercase }
+.note h4 { margin: 0; font-size: 14px; font-weight: 600 }
+.note p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink) }
+.note p code, .rule p code, .card p code { font: 12.5px var(--mono); background: var(--panel-2); padding: 0 3px; border-radius: 3px }
+.empty { color: var(--muted); font-size: 13px; padding: 8px }
+.t-rap { --tc: var(--t-rap) } .t-port { --tc: var(--t-port) } .t-review { --tc: var(--t-review) } .t-gap { --tc: var(--t-gap) }
+.dot.t-rap, .chip .t-rap { background: var(--t-rap) } .dot.t-port, .chip .t-port { background: var(--t-port) }
+.dot.t-review, .chip .t-review { background: var(--t-review) } .dot.t-gap, .chip .t-gap { background: var(--t-gap) }
+
+/* mapper */
+.section { display: grid; gap: 12px }
+.mapper { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 14px; align-items: start }
+.rules { padding: 6px; display: grid; gap: 2px }
+.rulebtn { border: 0; background: transparent; text-align: left; padding: 8px 10px; border-radius: 6px; font-size: 13.5px }
+.rulebtn:hover { background: var(--panel-2) }
+.rulebtn[aria-current="true"] { background: var(--accent-soft); font-weight: 500 }
+.rule { padding: 14px; display: grid; gap: 12px }
+.rule p { margin: 0; max-width: 80ch }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px }
+.side { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0 }
+.side .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 10px; background: var(--panel-2);
+  font: 500 12px var(--mono) }
+.side .hd button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 2px 8px; font: 12px var(--sans) }
+.side .code { max-height: none; border-radius: 0 }
+
+/* drill */
+.drillhead { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between }
+.progress { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted) }
+.bar { width: 160px; height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden }
+.bar i { display: block; height: 100%; background: var(--t-port); width: 0 }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; align-content: start }
+.card .q { font-weight: 600; font-size: 15px; margin: 0 }
+.card .sub { font: 500 11px var(--mono); color: var(--muted); letter-spacing: 0.04em }
+.card p { margin: 0; font-size: 14px }
+.card .acts { display: flex; gap: 8px; flex-wrap: wrap }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 5px 12px; font-size: 13px }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent) }
+.btn[aria-pressed="true"] { background: var(--t-port); border-color: var(--t-port); color: var(--on-accent) }
+.card.solid { border-color: var(--t-port) }
+
+#tip { position: fixed; z-index: 20; max-width: 320px; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.45;
+  padding: 8px 10px; border-radius: 7px; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / 0.2) }
+#tip b { font-family: var(--mono) }
+
+@media (max-width: 1180px) {
+  .bench { grid-template-columns: minmax(0, 1fr) }
+  .objs { position: static; display: block }
+  .objs ul { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 4px; margin: 4px 0 8px }
+  .obj { grid-template-columns: auto auto auto; white-space: nowrap; width: auto; border: 1px solid var(--line) }
+  .notespane { max-height: none }
+  .notes { max-height: 60vh }
+}
+@media (max-width: 760px) {
+  .mapper, .pair, .cards { grid-template-columns: minmax(0, 1fr) }
+  h1 { font-size: 25px }
+  .code { max-height: 60vh }
+}
+.foot { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.6; max-width: 90ch }
+.foot p { margin: 0 0 8px }
+.foot a { color: var(--accent) }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="toprow">
+      <div>
+        <div class="eyebrow">Proof Port · RAP study</div>
+        <h1>RAP Port Notebook</h1>
+        <p class="lede">Two Z transactions the Proof Port agents ported to RAP, read line by line for the nuances a reviewer will probe. Pick an object, click a coloured dot or a note. Words with a dotted underline explain themselves on hover.</p>
+      </div>
+      <div class="seg" role="group" aria-label="Transaction" id="subjects"></div>
+    </div>
+    <p class="blurb" id="blurb"></p>
+    <div class="facts" id="facts"></div>
+  </header>
+
+  <section class="section" aria-labelledby="h-chain">
+    <h2 id="h-chain">Objects involved</h2>
+    <div>
+      <div class="chain" id="chain"></div>
+      <div class="chaininfo" id="chaininfo"></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-bench">
+    <h2 id="h-bench">Read the code</h2>
+    <div class="bench" id="bench">
+      <nav class="pane objs" id="objs" aria-label="Objects"></nav>
+      <div class="pane codepane">
+        <div class="codehead"><div class="nm" id="fname"></div><div class="rl" id="frole"></div></div>
+        <div class="code" id="code" tabindex="0" aria-label="Source"></div>
+      </div>
+      <aside class="pane notespane" aria-label="Notes">
+        <div class="noteshead">
+          <div class="cnt" id="ncount"></div>
+          <div class="chips" id="tagchips"></div>
+        </div>
+        <div class="notes" id="notes"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-map">
+    <h2 id="h-map">Old rule, new home</h2>
+    <div class="mapper">
+      <div class="pane rules" id="rules"></div>
+      <div class="pane rule" id="rule"></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="h-drill">
+    <div class="drillhead">
+      <h2 id="h-drill">Drill</h2>
+      <div class="progress"><span id="ptext"></span><span class="bar"><i id="pbar"></i></span>
+        <button class="btn" id="onlyopen" aria-pressed="false">Hide the solid ones</button></div>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <footer class="foot">
+    <p>The code comes from the ZCRED and ZMM01 runs in <a href="https://github.com/alviso/proof-port">alviso/proof-port</a> (MIT), where agents ported each transaction to RAP and the old transaction graded the result on sealed cases. The old ZMM01 transaction is from <a href="https://github.com/trymytoolkit/sap-retail-z-sandbox">trymytoolkit/sap-retail-z-sandbox</a> by Romain Hecquet (MIT).</p>
+    <p>Notes by Peter Varga, <a href="https://portlandaiworks.com">Portland AI Works</a>. Corrections and questions are welcome as <a href="https://github.com/alviso/sap-notebooks/issues">issues</a>. <a href="../">More notebooks</a>.</p>
+    <p>Not affiliated with or endorsed by SAP SE. SAP, ABAP and SAP Fiori are trademarks of SAP SE.</p>
+  </footer>
+</div>
+<div id="tip" hidden></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const TAGS = { rap: 'RAP mechanics', port: 'Port decision', review: 'Review point', gap: 'Gap' };
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const rich = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  let subjectId = store.get('rapnb.subject', 'ZCRED');
+  if (!D.subjects[subjectId]) subjectId = 'ZCRED';
+  const st = { file: null, note: null, range: null, tags: new Set(Object.keys(TAGS)), rule: 0 };
+  let solid = new Set(store.get('rapnb.solid', []));
+  let onlyOpen = false;
+
+  const S = () => D.subjects[subjectId];
+  const fileById = id => S().files.find(f => f.id === id);
+
+  /* ---------- highlighter ---------- */
+  const KA = new Set(D.kw.abap), KC = new Set(D.kw.cds);
+  function wrap(tok, cls) {
+    const g = D.glossary[tok.toLowerCase()];
+    const c = (cls ? cls + ' ' : '') + (g ? 'g' : '');
+    if (!c) return esc(tok);
+    return g ? `<span class="${c}" data-g="${esc(tok.toLowerCase())}" tabindex="0">${esc(tok)}</span>` : `<span class="${c}">${esc(tok)}</span>`;
+  }
+  function hl(line, lang) {
+    const abap = lang === 'abap';
+    if (abap && line.startsWith('*')) return `<span class="c">${esc(line)}</span>`;
+    let out = '', i = 0; const n = line.length;
+    while (i < n) {
+      const ch = line[i], rest = line.slice(i);
+      if (abap && ch === '"') { out += `<span class="c">${esc(rest)}</span>`; break; }
+      if (!abap && rest.startsWith('//')) { out += `<span class="c">${esc(rest)}</span>`; break; }
+      if (ch === "'") {
+        let j = i + 1;
+        while (j < n) { if (line[j] === "'") { if (line[j + 1] === "'") { j += 2; continue; } break; } j++; }
+        out += `<span class="s">${esc(line.slice(i, j + 1))}</span>`; i = j + 1; continue;
+      }
+      if (abap && ch === '|') {
+        let j = line.indexOf('|', i + 1); if (j < 0) j = n - 1;
+        out += `<span class="s">${esc(line.slice(i, j + 1))}</span>`; i = j + 1; continue;
+      }
+      if (!abap && ch === '@') { const m = /^@[\w.]+/.exec(rest); if (m) { out += `<span class="a">${esc(m[0])}</span>`; i += m[0].length; continue; } }
+      if (ch === '%') { const m = /^%\w+/.exec(rest); if (m) { out += wrap(m[0], 'r'); i += m[0].length; continue; } }
+      if (/[A-Za-z_]/.test(ch)) {
+        const t = /^[A-Za-z_]\w*/.exec(rest)[0];
+        let cls = '';
+        if (abap) { if (t === t.toUpperCase() && KA.has(t)) cls = 'k'; } else if (KC.has(t)) cls = 'k';
+        out += wrap(t, cls); i += t.length; continue;
+      }
+      if (/\d/.test(ch)) { const m = /^\d+/.exec(rest)[0]; out += `<span class="n">${m}</span>`; i += m.length; continue; }
+      out += esc(ch); i++;
+    }
+    return out;
+  }
+  function rowsHTML(f, from, to, on) {
+    // drop the indentation the shown lines share, so a deep snippet fits its half of the pair
+    let cut = Infinity;
+    for (let ln = from; ln <= to; ln++) { const t = f.lines[ln - 1]; if (t.trim()) cut = Math.min(cut, t.length - t.trimStart().length); }
+    if (!isFinite(cut)) cut = 0;
+    let h = '';
+    for (let ln = from; ln <= to; ln++) {
+      const cls = on && ln >= on[0] && ln <= on[1] ? 'row on' : 'row';
+      h += `<div class="${cls}"><span class="no">${ln}</span><span class="mk"></span><code>${hl(f.lines[ln - 1].slice(cut), f.lang) || ' '}</code></div>`;
+    }
+    return h;
+  }
+
+  /* ---------- header ---------- */
+  function renderSubjects() {
+    $('subjects').innerHTML = Object.values(D.subjects).map(s =>
+      `<button type="button" data-s="${s.id}" aria-pressed="${s.id === subjectId}"><b>${esc(s.id)}</b><span>${esc(s.short)}</span></button>`).join('');
+    $('blurb').innerHTML = rich(S().blurb);
+    $('facts').innerHTML = S().facts.map(f => `<span>${esc(f.k)} <b>${esc(f.v)}</b></span>`).join('');
+  }
+  $('subjects').addEventListener('click', e => {
+    const b = e.target.closest('button[data-s]'); if (!b) return;
+    subjectId = b.dataset.s; store.set('rapnb.subject', subjectId);
+    st.file = null; st.note = null; st.range = null; st.rule = 0;
+    renderAll();
+  });
+
+  /* ---------- chain ---------- */
+  function renderChain() {
+    $('chain').innerHTML = S().chain.map((c, i) =>
+      (i ? '<span class="arrow" aria-hidden="true">→</span>' : '') +
+      `<button type="button" class="node" data-i="${i}" aria-current="${!!c.file && c.file === st.file}"><span class="ty">${esc(c.type)}</span><span class="nm">${esc(c.name)}</span><span class="sb">${esc(c.sub)}</span></button>`).join('');
+  }
+  $('chain').addEventListener('click', e => {
+    const b = e.target.closest('.node'); if (!b) return;
+    const c = S().chain[+b.dataset.i];
+    $('chaininfo').innerHTML = rich(c.info || '');
+    if (c.file) { openAt(c.file, null); }
+  });
+
+  /* ---------- workbench ---------- */
+  function visibleNotes(fid) { return S().notes.filter(n => (!fid || n.file === fid) && st.tags.has(n.tag)); }
+  function renderObjs() {
+    const groups = [['old', 'Old program'], ['new', 'RAP objects']];
+    $('objs').innerHTML = groups.map(([g, label]) => {
+      const fs = S().files.filter(f => f.group === g);
+      return `<div><h3>${label}</h3><ul>${fs.map(f => {
+        const ct = visibleNotes(f.id).length;
+        return `<li><button type="button" class="obj" data-f="${esc(f.id)}" aria-current="${f.id === st.file}" title="${esc(f.name)}"><span class="ty">${esc(f.adt)}</span><span class="nm">${esc(f.short)}</span><span class="ct">${ct || ''}</span></button></li>`;
+      }).join('')}</ul></div>`;
+    }).join('');
+  }
+  $('objs').addEventListener('click', e => { const b = e.target.closest('.obj'); if (b) openAt(b.dataset.f, null); });
+
+  function renderCode() {
+    const f = fileById(st.file);
+    $('fname').textContent = f.name;
+    $('frole').textContent = f.role;
+    const marks = {};
+    visibleNotes(f.id).forEach(n => { (marks[n.line] = marks[n.line] || []).push(n); });
+    let range = null;
+    if (st.note) { const n = S().notes.find(x => x.id === st.note); if (n && n.file === f.id) range = [n.line, n.line + n.span - 1]; }
+    else if (st.range) range = st.range;
+    let h = '';
+    f.lines.forEach((t, i) => {
+      const ln = i + 1;
+      const on = range && ln >= range[0] && ln <= range[1];
+      const dots = (marks[ln] || []).map(n => `<button type="button" class="dot t-${n.tag}" data-n="${n.id}" title="${esc(n.title)}" aria-label="Note: ${esc(n.title)}"></button>`).join('');
+      h += `<div class="row${on ? ' on' : ''}" data-l="${ln}"><span class="no">${ln}</span><span class="mk">${dots}</span><code>${hl(t, f.lang) || ' '}</code></div>`;
+    });
+    $('code').innerHTML = h;
+    if (range) {
+      const row = $('code').querySelector(`[data-l="${range[0]}"]`);
+      if (row) $('code').scrollTo({ top: Math.max(0, row.offsetTop - 60), behavior: reduce ? 'auto' : 'smooth' });
+    } else $('code').scrollTop = 0;
+  }
+  $('code').addEventListener('click', e => { const d = e.target.closest('.dot'); if (d) selectNote(d.dataset.n); });
+
+  function renderNotes() {
+    const f = fileById(st.file);
+    const ns = visibleNotes(f.id).sort((a, b) => a.line - b.line);
+    const all = S().notes.filter(n => n.file === f.id).length;
+    $('ncount').textContent = all ? `${ns.length} of ${all} notes in ${f.name}` : `No notes in ${f.name}`;
+    $('tagchips').innerHTML = Object.entries(TAGS).map(([k, v]) =>
+      `<button type="button" class="chip" data-t="${k}" aria-pressed="${st.tags.has(k)}"><i class="t-${k}"></i>${v}</button>`).join('');
+    $('notes').innerHTML = ns.length ? ns.map(n =>
+      `<button type="button" class="note t-${n.tag}" data-n="${n.id}" aria-current="${n.id === st.note}">
+        <span class="meta"><span class="tg">${TAGS[n.tag]}</span><span>L${n.line}${n.span > 1 ? '-' + (n.line + n.span - 1) : ''}</span></span>
+        <h4>${esc(n.title)}</h4><p>${rich(n.body)}</p></button>`).join('')
+      : `<div class="empty">${all ? 'All notes here are filtered out by the chips above.' : 'Nothing to add on this object. Try the behavior definition or the behavior pool.'}</div>`;
+    const cur = $('notes').querySelector('[aria-current="true"]');
+    if (cur) $('notes').scrollTo({ top: Math.max(0, cur.offsetTop - 10), behavior: reduce ? 'auto' : 'smooth' });
+  }
+  $('tagchips').addEventListener('click', e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    const t = b.dataset.t;
+    if (st.tags.has(t) && st.tags.size > 1) st.tags.delete(t); else st.tags.add(t);
+    renderObjs(); renderCode(); renderNotes();
+  });
+  $('notes').addEventListener('click', e => { const b = e.target.closest('.note'); if (b) selectNote(b.dataset.n); });
+
+  function selectNote(id) {
+    const n = S().notes.find(x => x.id === id); if (!n) return;
+    st.note = id; st.range = null;
+    if (st.file !== n.file) { st.file = n.file; renderObjs(); renderChain(); }
+    renderCode(); renderNotes();
+  }
+  function openAt(fid, range) {
+    st.file = fid; st.note = null; st.range = range;
+    renderObjs(); renderChain(); renderCode(); renderNotes();
+  }
+
+  /* ---------- mapper ---------- */
+  function renderRules() {
+    const rs = S().rules;
+    $('rules').innerHTML = rs.map((r, i) => `<button type="button" class="rulebtn" data-i="${i}" aria-current="${i === st.rule}">${esc(r.title)}</button>`).join('');
+    const r = rs[st.rule];
+    const side = (lab, s) => {
+      const f = fileById(s.file);
+      const from = Math.max(1, s.line - 2), to = Math.min(f.lines.length, s.line + s.span + 1);
+      return `<div class="side"><div class="hd"><span>${lab} · ${esc(f.name)}</span><button type="button" data-open="${esc(s.file)}" data-l="${s.line}" data-sp="${s.span}">Open in the reader</button></div>
+        <div class="code">${rowsHTML(f, from, to, [s.line, s.line + s.span - 1])}</div></div>`;
+    };
+    $('rule').innerHTML = `<p>${rich(r.note)}</p><div class="pair">${side('Old', r.old)}${side('New', r.new)}</div>`;
+  }
+  $('rules').addEventListener('click', e => { const b = e.target.closest('.rulebtn'); if (!b) return; st.rule = +b.dataset.i; renderRules(); });
+  $('rule').addEventListener('click', e => {
+    const b = e.target.closest('button[data-open]'); if (!b) return;
+    const l = +b.dataset.l, sp = +b.dataset.sp;
+    openAt(b.dataset.open, [l, l + sp - 1]);
+    $('bench').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  /* ---------- drill ---------- */
+  function renderDrill() {
+    const qs = D.drill;
+    const done = qs.filter(q => solid.has(q.id)).length;
+    $('ptext').textContent = `${done} of ${qs.length} solid`;
+    $('pbar').style.width = (100 * done / qs.length) + '%';
+    $('onlyopen').setAttribute('aria-pressed', String(onlyOpen));
+    $('cards').innerHTML = qs.filter(q => !(onlyOpen && solid.has(q.id))).map(q => {
+      const s = solid.has(q.id);
+      return `<article class="card${s ? ' solid' : ''}" data-q="${q.id}">
+        <div class="sub">${esc(q.about)}</div>
+        <p class="q">${rich(q.q)}</p>
+        <p class="ans" hidden>${rich(q.a)}</p>
+        <div class="acts"><button type="button" class="btn primary" data-act="show">Show answer</button>
+        <button type="button" class="btn" data-act="solid" aria-pressed="${s}">${s ? 'Solid' : 'Mark solid'}</button></div></article>`;
+    }).join('') || '<div class="empty">Every question is marked solid. Turn the filter off to go round again.</div>';
+  }
+  $('cards').addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const card = b.closest('.card'), id = card.dataset.q;
+    if (b.dataset.act === 'show') {
+      const a = card.querySelector('.ans'); a.hidden = !a.hidden;
+      b.textContent = a.hidden ? 'Show answer' : 'Hide answer';
+    } else {
+      if (solid.has(id)) solid.delete(id); else solid.add(id);
+      store.set('rapnb.solid', [...solid]);
+      const open = !card.querySelector('.ans').hidden;
+      renderDrill();
+      if (open) { const c = $('cards').querySelector(`[data-q="${id}"]`); if (c) { c.querySelector('.ans').hidden = false; c.querySelector('[data-act="show"]').textContent = 'Hide answer'; } }
+    }
+  });
+  $('onlyopen').addEventListener('click', () => { onlyOpen = !onlyOpen; renderDrill(); });
+
+  /* ---------- glossary tooltip ---------- */
+  const tip = $('tip');
+  function showTip(el) {
+    const k = el.dataset.g, g = D.glossary[k]; if (!g) return;
+    tip.innerHTML = `<b>${esc(el.textContent)}</b> ${esc(g)}`; tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    let y = r.bottom + 6; if (y + h > window.innerHeight - 8) y = r.top - h - 6;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  document.addEventListener('mouseover', e => { const g = e.target.closest('.g'); if (g) showTip(g); });
+  document.addEventListener('mouseout', e => { if (e.target.closest('.g')) tip.hidden = true; });
+  document.addEventListener('focusin', e => { const g = e.target.closest('.g'); if (g) showTip(g); else tip.hidden = true; });
+  document.addEventListener('scroll', () => { tip.hidden = true; }, true);
+
+  function renderAll() {
+    if (!st.file) st.file = S().start;
+    renderSubjects(); renderChain(); renderObjs(); renderCode(); renderNotes(); renderRules(); renderDrill();
+    $('chaininfo').innerHTML = rich(S().chainHint);
+  }
+  renderAll();
+  const first = S().notes.find(n => n.file === S().start);
+  if (first) selectNote(first.id);
+})();
+</script>
+</body>
+</html>

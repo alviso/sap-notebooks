@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAP Notebooks</title>
+<meta name="description" content="Interactive study pages over real SAP code, written for people who already know the basics.">
+<meta property="og:title" content="SAP Notebooks">
+<meta property="og:description" content="Interactive study pages over real SAP code, written for people who already know the basics.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #F2F4F7; --panel: #FFFFFF; --ink: #17202B; --muted: #5A6575; --line: #D7DDE6;
+  --accent: #2A57C0; --accent-soft: #E2E9FA;
+  --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0E131A; --panel: #151C25; --ink: #DDE4EC; --muted: #95A2B3; --line: #2A3544;
+  --accent: #82A4FF; --accent-soft: #1C2943; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0E131A; --panel: #151C25; --ink: #DDE4EC; --muted: #95A2B3; --line: #2A3544;
+  --accent: #82A4FF; --accent-soft: #1C2943; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans) }
+.wrap { max-width: 860px; margin: 0 auto; padding: 48px 16px 64px }
+.eyebrow { font: 500 11px/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted) }
+h1 { font-size: 30px; line-height: 1.15; margin: 8px 0 0; font-weight: 600 }
+.lede { color: var(--muted); max-width: 64ch; margin: 10px 0 0 }
+.list { margin-top: 32px; display: grid; gap: 14px }
+a.card { display: block; text-decoration: none; color: inherit; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 18px 20px; transition: border-color .15s }
+a.card:hover, a.card:focus-visible { border-color: var(--accent); outline: none }
+.card h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--accent) }
+.card p { margin: 6px 0 0; color: var(--muted) }
+.tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px }
+.tags span { font: 500 11px/1 var(--mono); padding: 5px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--accent) }
+.foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px }
+.foot p { margin: 0 0 8px }
+.foot a { color: var(--accent) }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">SAP notebooks</div>
+  <h1>Study pages over real SAP code</h1>
+  <p class="lede">Each notebook takes real Z code, old and new, and anchors short notes to the lines that matter. They are written for people who already know the basics, so the notes go after the nuances: what the framework does for you, what a port decided, what a reviewer would push back on.</p>
+
+  <div class="list">
+    <a class="card" href="rap-port-notebook/">
+      <h2>RAP Port Notebook</h2>
+      <p>Two custom transactions, a credit limit change and a retail article with variants, ported from dynpro to RAP. Read the BDEF, behavior pool and CDS views side by side with the old PAI/PBO code, then test yourself on 16 drill questions.</p>
+      <div class="tags"><span>RAP</span><span>BDEF</span><span>EML</span><span>CDS</span><span>Fiori elements</span><span>dynpro</span></div>
+    </a>
+  </div>
+
+  <footer class="foot">
+    <p>By Peter Varga, <a href="https://portlandaiworks.com">Portland AI Works</a>. Source and corrections on <a href="https://github.com/alviso/sap-notebooks">GitHub</a>.</p>
+    <p>Not affiliated with or endorsed by SAP SE. SAP, ABAP and SAP Fiori are trademarks of SAP SE.</p>
+  </footer>
+</div>
+</body>
+</html>
