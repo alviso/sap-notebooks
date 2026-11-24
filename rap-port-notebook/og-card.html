@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RAP Port Notebook preview card</title>
+<!-- Source of og.png, the link preview image (1200 x 630 at 2x). Render with headless Chrome, see README. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=block">
+<style>
+:root {
+  --bg: #0E131A; --panel: #151C25; --panel-2: #1B2430; --ink: #DDE4EC; --muted: #95A2B3; --line: #2A3544;
+  --accent: #82A4FF; --rap: #82A4FF; --port: #4CC3AF; --review: #E3A84E; --gap: #F08282;
+  --code-bg: #10161E; --kw: #93ABFF; --com: #7E8B9C; --hl: #3A3113; --hl-edge: #C99A2E; --gutter: #5E6A7A;
+  --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--sans) }
+.card { position: relative; width: 1200px; height: 630px; padding: 56px 0 0 60px }
+.left { width: 480px; height: 518px; display: flex; flex-direction: column }
+.eyebrow { font: 500 15px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted) }
+h1 { margin: 18px 0 0; font-size: 60px; line-height: 1.02; font-weight: 600; letter-spacing: -0.01em }
+.lede { margin: 22px 0 0; font-size: 22px; line-height: 1.4; color: var(--muted) }
+.subj { margin-top: 22px; display: flex; gap: 10px }
+.subj span { font: 500 14px/1 var(--mono); color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px }
+.stats { margin-top: auto; display: flex; gap: 12px }
+.stat { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 12px 14px 11px; min-width: 112px }
+.stat b { display: block; font: 600 28px/1 var(--sans); color: var(--ink) }
+.stat span { display: block; margin-top: 6px; font: 500 12px/1.2 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em }
+.url { margin-top: 22px; font: 500 16px/1 var(--mono); color: var(--accent) }
+
+.code { position: absolute; left: 592px; top: 56px; width: 660px; height: 574px; background: var(--code-bg);
+  border: 1px solid var(--line); border-bottom: 0; border-radius: 12px 0 0 0; overflow: hidden }
+.head { height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 76px 0 18px; border-bottom: 1px solid var(--line); background: var(--panel) }
+.head .nm { font: 500 15px/1 var(--mono); color: var(--ink) }
+.head .tp { font: 500 11px/1 var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px }
+pre { margin: 0; padding: 10px 0; font: 400 15px/26px var(--mono); white-space: pre }
+.ln { display: flex; align-items: center; height: 26px; padding-right: 12px }
+.ln .n { flex: none; width: 44px; text-align: right; color: var(--gutter); font-size: 13px }
+.ln .d { flex: none; width: 30px; display: flex; justify-content: center }
+.ln .d i { width: 9px; height: 9px; border-radius: 50% }
+.ln.hl { background: var(--hl); box-shadow: inset 3px 0 0 var(--hl-edge) }
+.k { color: var(--kw) } .c { color: var(--com) }
+.rap { background: var(--rap) } .port { background: var(--port) } .review { background: var(--review) } .gapc { background: var(--gap) }
+
+.note { position: absolute; left: 700px; top: 372px; width: 420px; height: 182px; background: var(--panel-2); border: 1px solid var(--line);
+  border-left: 4px solid var(--review); border-radius: 10px; padding: 16px 18px 17px; box-shadow: 0 18px 40px rgba(0,0,0,.45) }
+.note .tag { font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--review) }
+.note h2 { margin: 9px 0 0; font-size: 21px; line-height: 1.2; font-weight: 600 }
+.note p { margin: 8px 0 0; font-size: 15.5px; line-height: 1.45; color: var(--muted) }
+.note code { font: 500 14px var(--mono); color: var(--ink) }
+.legend { margin-left: auto; display: flex; gap: 14px; font: 500 12px/1 var(--mono); color: var(--muted) }
+.legend span { display: flex; align-items: center; gap: 6px }
+.legend i { width: 8px; height: 8px; border-radius: 50% }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="left">
+    <div class="eyebrow">SAP notebooks · RAP</div>
+    <h1>RAP Port Notebook</h1>
+    <p class="lede">Two custom transactions ported from dynpro to RAP, read line by line for the nuances a reviewer will probe.</p>
+    <div class="subj"><span>ZCRED · credit limit</span><span>ZMM01 · article + variants</span></div>
+    <div class="stats">
+      <div class="stat"><b>81</b><span>notes</span></div>
+      <div class="stat"><b>17</b><span>old to new</span></div>
+      <div class="stat"><b>16</b><span>drill cards</span></div>
+    </div>
+    <div class="url">alviso.github.io/sap-notebooks</div>
+  </div>
+
+  <div class="code">
+    <div class="head"><span class="tp">BDEF</span><span class="nm">ZPP_CR_C_CUSTOMER</span><div class="legend"><span><i class="rap"></i>RAP</span><span><i class="port"></i>Port</span><span><i class="review"></i>Review</span></div></div>
+    <pre><div class="ln"><span class="n">1</span><span class="d"><i class="rap"></i></span><span><span class="k">managed with additional save implementation in class</span> zpp_cr_bp_customer <span class="k">unique</span>;</span></div><div class="ln"><span class="n">2</span><span class="d"></span><span></span></div><div class="ln"><span class="n">3</span><span class="d"></span><span><span class="k">define behavior for</span> ZPP_CR_C_CUSTOMER <span class="k">alias</span> Customer</span></div><div class="ln"><span class="n">4</span><span class="d"></span><span><span class="k">persistent table</span> zcr_customer</span></div><div class="ln hl"><span class="n">5</span><span class="d"><i class="review"></i></span><span><span class="k">lock master</span></span></div><div class="ln"><span class="n">6</span><span class="d"></span><span>{</span></div><div class="ln"><span class="n">7</span><span class="d"><i class="rap"></i></span><span>  <span class="k">field</span> ( <span class="k">readonly</span> ) CustomerName, Currency, Blocked;</span></div><div class="ln"><span class="n">8</span><span class="d"><i class="rap"></i></span><span>  <span class="k">field</span> ( <span class="k">features</span> : <span class="k">instance</span> ) CreditLimit;</span></div><div class="ln"><span class="n">9</span><span class="d"></span><span></span></div><div class="ln"><span class="n">10</span><span class="d"></span><span class="c">  // the limit is changed with the action only</span></div><div class="ln"><span class="n">11</span><span class="d"><i class="port"></i></span><span>  <span class="k">internal update</span>;</span></div><div class="ln"><span class="n">12</span><span class="d"></span><span></span></div><div class="ln"><span class="n">13</span><span class="d"></span><span class="c">  // screen 0100: type a customer number</span></div><div class="ln"><span class="n">14</span><span class="d"><i class="review"></i></span><span>  <span class="k">static action</span> ChooseCustomer <span class="k">parameter</span> ZPP_CR_A_SELECT;</span></div><div class="ln"><span class="n">15</span><span class="d"></span><span></span></div><div class="ln"><span class="n">16</span><span class="d"></span><span class="c">  // screen 0200: the new limit and the reason</span></div><div class="ln"><span class="n">17</span><span class="d"><i class="rap"></i></span><span>  <span class="k">action</span> ChangeCreditLimit <span class="k">parameter</span> ZPP_CR_A_CHANGE;</span></div><div class="ln"><span class="n">18</span><span class="d"></span><span></span></div><div class="ln"><span class="n">19</span><span class="d"></span><span class="c">  // FORM save_change: a new limit of zero blocks</span></div><div class="ln"><span class="n">20</span><span class="d"><i class="port"></i></span><span>  <span class="k">determination</span> blockWhenZero <span class="k">on modify</span></span></div></pre>
+  </div>
+
+  <div class="note">
+    <div class="tag">Review point</div>
+    <h2>Locked, but no ETag</h2>
+    <p>A pessimistic lock that, in stateless OData, lives for one request. There is no <code>etag master</code>, so nothing checks that the row is unchanged between reading the object page and pressing the action.</p>
+  </div>
+</div>
+</body>
+</html>

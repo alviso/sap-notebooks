@@ -28,6 +28,11 @@ Port Notebook you need a checkout of [alviso/proof-port](https://github.com/alvi
 
 Set `PROOF_PORT=/path/to/proof-port` if the checkout is somewhere else.
 
+The link preview image `og.png` is rendered from `og-card.html` with headless Chrome:
+
+    chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=1200,630 \
+      --virtual-time-budget=6000 --screenshot=og.png "file://$PWD/og-card.html"
+
 ## Corrections
 
 If a note is wrong, or you think a nuance is missing, open an issue with the object name and the line.
